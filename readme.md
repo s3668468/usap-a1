@@ -19,7 +19,7 @@ xUbuntu (A linux distribution) is already installed on my system and the followi
    2. *Enter Yes*
    3. **SCREENSHOT**
 
-## Install RaspberryPiOS
+## Install Raspberry Pi OS
 
 1. Insert micro SD card reader with SD card into the system
    1. **SCREENSHOT**
@@ -152,7 +152,7 @@ xUbuntu (A linux distribution) is already installed on my system and the followi
     **SCREENSHOT**
     Congragulations you have now implemented Pushbullet notifications! Mdadm will automatically use this script whenever it detects an event.
 
-### Installing Docker
+## Installing Docker
 
 1. Ensure you are logged into the Raspberry Pi
    1. `ssh pi@192.168.x.x`
@@ -169,7 +169,9 @@ xUbuntu (A linux distribution) is already installed on my system and the followi
 6. Upgrade the Docker install by running a standard apt update and upgrade
    1. `sudo apt update -y && sudo apt upgrade -y`
 
-### Creating Docker Image
+## Creating Docker Image
+
+### Install Packages
 
 1. Create a centos:centos7 Docker image and run it
    1. `docker image pull centos:centos7`
@@ -186,3 +188,5 @@ xUbuntu (A linux distribution) is already installed on my system and the followi
    1. Press *CTRL+P* and *CTRL+Q* to exit the Docker image without closing it
    2. Obtain the Docker ID with `docker ps`
    3. `docker commit <containerid> <name:tag>`
+
+### Make configuration changes
