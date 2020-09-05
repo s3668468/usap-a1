@@ -14,6 +14,7 @@ yum install -y man man-pages;
 
 echo "Installing clang and clang extras";
 yum install -y gcc gcc-c++ clang;
+#Due to the assignment requiring the installtion of 32-bit Raspbian, it is not possible to gain access to the required CentOS repositories as they are 64-bit ARM only. Source <https://centos.pkgs.org/> (CentOS SCLo)
 
 echo "Installing vim"
 yum install -y vim;
@@ -45,7 +46,7 @@ chmod +x Berryconda3-2.0.0-Linux-armv7l.sh;
 ln -s /opt/berryconda3/bin/conda /usr/local/bin/conda;
 
 echo "Install RR - Reverse and Replay";
-#This software cannot be installed due to it not being supproted on ARM architecture. Source: <https://github.com/mozilla/rr>
+#This software cannot be installed due to only having x86 architecture support. Source: <https://github.com/mozilla/rr>
 
 echo "Install sshd";
 yum install -y openssh-server openssh-clients;

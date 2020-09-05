@@ -21,10 +21,11 @@ xUbuntu (A linux distribution) is already installed on my system and the followi
 
 ## Install Raspberry Pi OS
 
+<https://www.raspberrypi.org/downloads/raspberry-pi-os/>
+
 1. Insert micro SD card reader with SD card into the system
    1. **SCREENSHOT**
 2. Download Raspberry Pi OS (32-bit) with desktop and recommended software image from the Raspberry Pi website  
-<https://www.raspberrypi.org/downloads/raspberry-pi-os/>
 
 3. Extract the .zip
     1. `unzip 2020-08-20-raspios-buster-armhf-full.zip`
@@ -178,7 +179,7 @@ xUbuntu (A linux distribution) is already installed on my system and the followi
    2. `docker run -i -t centos:centos7`
 2. Download the centos install script from the github repository.
    1. `yum makecache && yum install -y wget`
-   2. `wget -N <script>`
+   2. `wget -N https://github.com/s3668468/usap-a1/blob/master/centos7_install.sh`
 3. Make the script an executable and run it
    1. `chmod +x centos7_install.sh`
    2. `./centos7_install.sh`
@@ -190,3 +191,141 @@ xUbuntu (A linux distribution) is already installed on my system and the followi
    3. `docker commit <containerid> <name:tag>`
 
 ### Make configuration changes
+
+#### Expose nginx
+
+1. Open the saved Docker container with the following commands and run nginx
+   1. `docker run -i -t -p 80:80 <name:tag>`
+   2. `nginx`
+2. Connect to it from the client machine
+   1. **SCREENSHOT**
+
+#### Create new users
+
+1. Create a new user called 'fred' who has access to root
+   1. `yum install -y sudo`
+   2. `useradd fred`
+   3. `usermod -aG wheel fred`  
+      Wheel is used as installing sudo does not create the privileged group
+   4. `passwd fred`
+   5. Password is `usap`
+2. Create a new user called 'user' who has access to root, Berryconda and has zsh set by default.
+   1. `useradd user -s /bin/zsh`
+   2. `usermod -aG wheel user`
+   3. `passwd user`
+   4. Password is `usap`
+   5. `su user`
+   6. ZSH set up is required
+      1. Enter `1`
+      2. Enter `0`
+   7. Berryconda was symbolically link during the installation script from earlier. To test user `conda --version`
+
+#### Install OhMyZSH and Auto Suggestions
+
+<https://github.com/ohmyzsh/ohmyzsh>
+<https://github.com/zsh-users/zsh-autosuggestions>
+
+1. Log into 'fred' and install OhMyZsh
+   1. `su fred`
+   2. `sh -c "$(wget -O- https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"`
+   3. Enter `y`
+   4. `git clone https://github.com/zsh-users/zsh-autosuggestions ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions`
+   5. Add the following line to the plugins in `.zshrc`
+      `nano ~/.zshrc`
+      `plugins=(zsh-autosuggestions)`
+   6. Add a custom theme by editing the `ZSH_THEME` variable
+      `ZSH_THEME="afowler"`
+
+2. Repeat these steps for 'user'
+   1. **SCREENSHOT**
+
+#### Enable SSH with redirected port
+
+1. Exit the Docker image with CTRL+P and CTRL+Q
+2. Commit and save the Docker image
+   1. `docker commit <containerid> <name:tag>`
+   2. `docker stop <containerid>`
+3. Start the Docker image with more port argument
+   1. `docker run -i -t -p 80:80 -p 1234:22 <name:tag>`
+4. Create an ssh key and run the process to test connection
+   1. `ssh-keygen -A`
+   2. sshd requires an absolute path
+      `/usr/sbin/sshd -D`
+   3. **SCREENSHOT**
+
+#### Enable x11 over SSH and Disable Root Access
+
+1. Edit the SSH configuration file and enable X11 and disable root access
+   1. `nano /etc/ssh/sshd_config`
+   2. Uncomment `PermitRootLogin` and set it to `no`
+   3. Uncomment `X11Forwarding yes`, `X11DisplayOffset 10` and `X11UseLocalhost yes`
+   4. Start sshd with `/sbin/sshd`
+2. Install xeyes on the client machine
+   1. `sudo apt install x11-apps`
+   2. `ssh -X user@raspberrypi.local -p 1234`
+
+#### Add zsh to the list of available shells on the system
+
+1. Adding zsh to the list of shells can be done with one command
+   1. `echo "/bin/zsh" >> /etc/shells`
+
+#### Write a script to start nginx and sshd
+
+1. Create a script file and add in commands to start nginx and sshd
+   1. `cd && nano nginx_sshd.sh`
+   2. Enter the folling text:  
+
+      ```bash
+      !/bin/bash
+      /sbin/nginx
+      /sbin/sshd
+      ```
+
+   3. Make the script and executable and run it
+      `chmod +x nginx_sshd.sh`
+      `sh nginx_sshd.sh`
+
+#### Configure Git
+
+1. Configure git user name
+   1. `git config --global user.name "Cameron Tavelli"`
+2. Configure git user email
+   1. `git config --global user.email "s3668468@student.rmit.edu.au"`
+
+#### Check versions for every program
+
+1. Run the provided script to automatically check
+   1. `wget -N https://github.com/s3668468/usap-a1/blob/master/version.sh`
+   2. `chmod +x version.sh`
+   3. `sh version.sh`
+
+### Commit Docker image
+
+<https://docs.docker.com/engine/reference/commandline/push/>
+
+1. Create an account on <https://hub.docker.com>
+2. Log into the account in terminal
+   1. `docker login`
+   2. Username: `<username>`
+   3. Password: `<password>`
+3. Check and tag the Docker image
+   1. `docker images`
+   2. `docker tag centos7:latest s3668468/centos7:latest`
+   3. `docker push s3668468/centos7:latest`
+4. Check the Docker image on the repository and set it to private
+   1. Link to Docker image <https://hub.docker.com/repository/docker/s3668468/centos7/general>
+
+### <https://github.com/s3668468/usap-a1>
+
+## References
+
+- [1]"Download Raspberry Pi OS for Raspberry Pi", Raspberry Pi, 2020. [Online]. Available: <https://www.raspberrypi.org/downloads/raspberry-pi-os/>
+- [2]"Pushbullet - Your devices working better together", Pushbullet.com, 2020. [Online]. Available: <https://www.pushbullet.com/>
+- [3]Get.docker.com, 2020. [Online]. Available: <https://get.docker.com>
+- [4]"ohmyzsh/ohmyzsh", GitHub, 2020. [Online]. Available: <https://github.com/ohmyzsh/ohmyzsh>
+- [5]"zsh-users/zsh-autosuggestions", GitHub, 2020. [Online]. Available: <https://github.com/zsh-users/zsh-autosuggestions>
+- [6]"docker push", Docker Documentation, 2020. [Online]. Available: <https://docs.docker.com/engine/reference/commandline/push/>
+- [7]"CentOS Repositories", 2020. [Online]. Available: <https://centos.pkgs.org/>
+- [8]"SpecialInterestGroup/AltArch/armhfp - CentOS Wiki", Wiki.centos.org, 2020. [Online]. Available: <https://wiki.centos.org/action/show/SpecialInterestGroup/AltArch/armhfp>
+- [9]"jjhelmus/berryconda", GitHub, 2020. [Online]. Available: <https://github.com/jjhelmus/berryconda>
+- [10]"mozilla/rr", GitHub, 2020. [Online]. Available: <https://github.com/mozilla/rr>
