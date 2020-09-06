@@ -13,18 +13,18 @@ xUbuntu (A linux distribution) is already installed on my system and the followi
 2. Install TigerVNC
    1. `sudo apt install tigervnc-*`
    2. *Enter Yes*
-   3. **SCREENSHOT**
+   3. ![tigervnc](screenshots/s3668468_a1_t1_tigervnc.png)
 3. Install NMAP
    1. `sudo apt install nmap`
    2. *Enter Yes*
-   3. **SCREENSHOT**
+   3. ![nmap](screenshots/s3668468_a1_t1_nmap.png)
 
 ## Install Raspberry Pi OS
 
 <https://www.raspberrypi.org/downloads/raspberry-pi-os/>
 
 1. Insert micro SD card reader with SD card into the system
-   1. **SCREENSHOT**
+   1. ![sdcard](screenshots/s3668468_a1_t2_sdcard.png)
 2. Download Raspberry Pi OS (32-bit) with desktop and recommended software image from the Raspberry Pi website  
 
 3. Extract the .zip
@@ -32,18 +32,18 @@ xUbuntu (A linux distribution) is already installed on my system and the followi
 4. Unmount partitions
     1. `lsblk -p`
     2. `sudo unmount -f /dev/sdb1`
-    3. **SCREENSHOT**
+    3. ![umount](screenshots/s3668468_a1_t2_umount.png)
 5. Write the Raspberry Pi image onto the SD Card
     1. `sudo dd if=2020-08-20-raspios-buster-armhf-full.img of=/dev/sdb bs=4M status=progress`
-    2. **SCREENSHOT**
+    2. ![image](screenshots/s3668468_a1_t2_image.png)
 6. Insert the SD Card into the Raspberry Pi
 7. Run the configurator on the device and enable SSH
 8. Use nmap to verify the IP of the Raspberry Pi
     1. `nmap -sn 192.168.0.0/24`
-    2. **SCREENSHOT**
+    2. ![nmap](screenshots/s3668468_a1_t2_nmap.png)
 9. SSH into the Raspberry Pi
     1. `ssh pi@192.168.x.x`
-    2. **SCREENSHOT**
+    2. ![ssh](screenshots/s3668468_a1_t2_ssh.png)
     3. Update the system: `sudo apt update -y && sudo apt upgrade -y`
 10. Uninstall RealVNC and install TigerVNC
     1. `sudo apt remove realvnc-*`
@@ -76,7 +76,7 @@ xUbuntu (A linux distribution) is already installed on my system and the followi
     3. `sudo systemctl restart vncserver@:1`
 13. Connect to the Raspberry Pi from a client machine
     1. `vncviewer raspberrypi.local:1`
-    2. **SCREENSHOT**
+    2. ![tigervnc](screenshots/s3668468_a1_t2_tigervnc.png)
 
 ### Setting up a RAID configuration
 
@@ -91,7 +91,7 @@ xUbuntu (A linux distribution) is already installed on my system and the followi
       7. `w`
       8. `Y`
    3. Repeat this step for other USB drive (`/dev/sdb`)
-      1. **SCREENSHOT**
+      1. ![format](screenshots/s3668468_a1_t3_format.png)
 3. Once both USB drives are partitioned for Linux RAID, install mdadm and create a RAID1 configuration
    1. `sudo apt install mdadm`
    2. Verify the changes on the USB drives with `sudo mdadm -E /dev/sd[ab]1`
@@ -100,7 +100,7 @@ xUbuntu (A linux distribution) is already installed on my system and the followi
       2. `y`
    4. Watch the RAID configuration being created
       1. `watch cat /proc/mdstat`
-      2. **SCREENSHOT**
+      2. ![mdstat](screenshots/s3668468_a1_t3_mdstat.png)
 4. Once RAID is complete, create a file system on RAID `/dev/md0`
    1. `sudo mkfs -t ext4 /dev/md0`
 5. Create a mount point to attach new file system
@@ -109,7 +109,7 @@ xUbuntu (A linux distribution) is already installed on my system and the followi
    1. `sudo mount /dev/md0 /mnt/md0`
 7. Check if the mount was successful
    1. `df -h /mnt/md0`
-   2. **SCREENSHOT**
+   2. ![mount](screenshots/s3668468_a1_t3_successful_mount.png)
 8. Save the mdadm array layout (Can only be done in root)
    1. `sudo su`
    2. `mdadm --detail --scan /dev/md0 >> /etc/mdadm/mdadm.conf`
@@ -139,19 +139,35 @@ xUbuntu (A linux distribution) is already installed on my system and the followi
     6. `sudo ln -s /opt/pb/pushbullet /usr/local/bin/pushbullet`
     7. `pushbullet list`  
     Pushbullet can now be used in the command line
-15. Next we download a script (<https://github.com/hunleyd/mdadm_notify>) that triggers when mdadm reports an event. This event is then pushed to all pushbullet devices on the account.
-    1. `sudo git clone https://github.com/hunleyd/mdadm_notify /opt/mn/`
-    2. `sudo nano /opt/mn/mdadm_notify`
-    3. Edit the final line so it looks like this  
-    `echo "$msg" | pushbullet push all note $msg`
-    4. Edit the mdadm configuration file so that is uses the newly created program
-    `sudo nano /etc/mdadm/mdadm.conf`
-    5. Replace the MAILADDR line with the following:
-    `PROGRAM /opt/mn/mdadm_notify`
-    6. To simulate a fault we will be using the following commands
-    `mdadm --manage --set-faulty /dev/md0 /dev/sda`
-    **SCREENSHOT**
-    Congragulations you have now implemented Pushbullet notifications! Mdadm will automatically use this script whenever it detects an event.
+15. Next we create a script that uses mdadm to check if there is a drive failure.
+    1. `cd`
+    2. `nano mdadm_push`  
+
+       ```bash
+       !/bin/bash
+       while true
+       do
+         sleep 5m
+         MDSTATUS=$(sudo mdadm --detail /dev/md0 | head -n 12 | tail -n +12 | cut -c22-30)
+         if [ $(echo $MDSTATUS | grep -c "clean") -eq 0 ]
+         then
+                  echo "/dev/md0 change detected. Sending pushbullet"
+                  pushbullet push all note "/dev/md0 change detected! Status: $(MDSTATUS)"
+         else
+                  echo "/dev/md0 is clean"
+         fi
+       done
+       ```
+
+    3. Make the script an executable  
+       `chmod +x mdadm_push`
+    4. Put the script in `/etc/init.d/` so the script runs on boot  
+       `sudo cp mdadm_push.sh /etc/init.d/mdadm_push`
+    5. Update the boot sequence to include the script  
+       `sudo update-rc.d mdadm_push defaults`
+    6. When a change is detected on mdadm, a pushbullet notification will be sent with this script.  
+       Example:
+       ![pushbullet](screenshots/s3668468_a1_t3_pushbullet.png)
 
 ## Installing Docker
 
@@ -163,7 +179,6 @@ xUbuntu (A linux distribution) is already installed on my system and the followi
    1. `chmod +x get-docker.sh`
 4. Run Docker script
    1. `sudo sh get-docker.sh`
-   2. **SCREENSHOT**
 5. After the script is installed, add the user to the Docker group
    1. `sudo usermod -aG docker pi`
    2. `sudo reboot now`
@@ -198,7 +213,7 @@ xUbuntu (A linux distribution) is already installed on my system and the followi
    1. `docker run -i -t -p 80:80 <name:tag>`
    2. `nginx`
 2. Connect to it from the client machine
-   1. **SCREENSHOT**
+   1. ![nginx](screenshots/s3668468_a1_t5_nginx.png)
 
 #### Create new users
 
@@ -237,7 +252,7 @@ xUbuntu (A linux distribution) is already installed on my system and the followi
       `ZSH_THEME="afowler"`
 
 2. Repeat these steps for 'user'
-   1. **SCREENSHOT**
+   1. ![zsh](screenshots/s3668468_a1_t5_zsh.png)
 
 #### Enable SSH with redirected port
 
@@ -251,7 +266,7 @@ xUbuntu (A linux distribution) is already installed on my system and the followi
    1. `ssh-keygen -A`
    2. sshd requires an absolute path
       `/usr/sbin/sshd -D`
-   3. **SCREENSHOT**
+   3. ![ssh](screenshots/s3668468_a1_t5_ssh.png)
 
 #### Enable x11 over SSH and Disable Root Access
 
@@ -263,6 +278,7 @@ xUbuntu (A linux distribution) is already installed on my system and the followi
 2. Install xeyes on the client machine
    1. `sudo apt install x11-apps`
    2. `ssh -X user@raspberrypi.local -p 1234`
+   3. ![x11](screenshots/s3668468_a1_t5_x11.png)
 
 #### Add zsh to the list of available shells on the system
 
